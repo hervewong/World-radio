@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f6feb">
+<title>Radio Monde (complet)</title>
+<!-- PWA Manifest intégré -->
+<link rel="manifest" href="data:application/manifest+json,{
+  %22name%22: %22Radio Monde%22,
+  %22short_name%22: %22RadioMonde%22,
+  %22start_url%22: %22.%22,
+  %22display%22: %22standalone%22,
+  %22background_color%22: %22%231f6feb%22,
+  %22theme_color%22: %22%231f6feb%22,
+  %22icons%22: [
+    {
+      %22src%22: %22https://images.emojiterra.com/google/android-10/512px/1f4fb.png%22,
+      %22sizes%22: %22512x512%22,
+      %22type%22: %22image/png%22
+    }
+  ]
+}">
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--tx:#1c2128;--bd:#c8ccd4;--ac:#1f6feb;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1e2227;--card:#2d333b;--tx:#e6e6e6;--bd:#444c56;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1e2227;--card:#2d333b;--tx:#e6e6e6;--bd:#444c56;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px system-ui,sans-serif}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+header{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:8px;z-index:9;border-bottom:1px solid var(--bd)}
+h1{margin:2px 4px 6px;font-size:18px}
+.row{display:flex;gap:6px;margin:6px 0}
+input,select,button,textarea{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:9px}
+input,select,textarea{flex:1;min-width:0;width:100%;margin:3px 0}
+button{cursor:pointer}
+nav{display:flex;gap:4px}
+nav button{flex:1;padding:9px 2px;font-size:14px}
+nav button.on{background:var(--ac);border-color:var(--ac);color:#fff}
+main{padding:8px}
+details,.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;margin:8px 0;padding:4px 10px}
+summary{font-weight:600;padding:10px 0}
+.r{display:flex;align-items:center;border-top:1px solid var(--bd)}
+.r a{flex:1;padding:10px 6px;color:var(--tx);text-decoration:none}
+.r small{display:block;opacity:.65;font-size:12px}
+.s{border:0;background:none;font-size:22px;padding:6px 10px}
+a.go{display:block;text-align:center;background:var(--ac);color:#fff;border-radius:8px;padding:11px;margin:6px 0;text-decoration:none}
+a.off{opacity:.45;pointer-events:none}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:8px 0}
+.chips a{border:1px solid var(--bd);border-radius:16px;padding:7px 12px;color:var(--tx);text-decoration:none}
+.sec{font-weight:600;margin:14px 4px 2px}
+.hint{opacity:.75;padding:8px 2px;font-size:13px}
+#pl{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));z-index:9}
+#pt{flex:1;min-width:0}#pt b,#pt small{display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}#pt small{opacity:.7;font-size:12px}
+#pp{background:var(--ac);border-color:var(--ac);color:#fff;width:48px;font-size:18px}#pv{width:90px;flex:none;padding:0}
+body{padding-bottom:84px}
+</style>
+</head>
+<body>
+<header>
+  <h1>📻 Radio Monde</h1>
+  <div class="row"><input id="q" placeholder="Rechercher : radio, pays, genre ou fréquence" autocapitalize="off" autocorrect="off" spellcheck="false"><button id="gs" title="Rechercher">🔍</button><button id="th" title="Clair / sombre">◐</button></div>
+  <nav><button data-t="all">Recherche</button><button data-t="radios">Radios</button><button data-t="freqs">Fréquences</button><button data-t="ondes">Ondes</button><button data-t="favs">Favoris</button></nav>
+</header>
+<main id="out"></main>
+<main><div class="hint" id="st"></div></main>
+<div id="pl"><div id="pt"><b id="pn">Aucune station</b><small id="pi">Choisissez une radio</small></div><button id="pp" title="Lecture / arrêt">▶</button><input id="pv" type="range" min="0" max="1" step="0.05" value="0.8" title="Volume"></div>
+<audio id="au"></audio>
+<script>
+const DIRS=[["Radio Garden (globe)","https://radio.garden/search?q={q}","https://radio.garden/"],["Radio Browser (annuaire libre)","https://www.radio-browser.info/search?name={q}","https://www.radio-browser.info/"],["TuneIn","https://tunein.com/search/?query={q}","https://tunein.com/"],["radio.net","https://www.radio.net/search?q={q}","https://www.radio.net/"],["myTuner","https://mytuner-radio.com/search/?q={q}","https://mytuner-radio.com/"],["Online Radio Box","https://onlineradiobox.com/search?q={q}","https://onlineradiobox.com/"]];
+const PAYS=[["fr","France"],["us","États-Unis"],["gb","Royaume-Uni"],["de","Allemagne"],["es","Espagne"],["it","Italie"],["ca","Canada"],["br","Brésil"],["ma","Maroc"],["dz","Algérie"],["tn","Tunisie"],["sn","Sénégal"],["eg","Égypte"],["tr","Turquie"],["ru","Russie"],["in","Inde"],["cn","Chine"],["jp","Japon"],["kr","Corée du Sud"],["au","Australie"]];
+const MODES={am:"AM",usb:"USB",lsb:"LSB",cw:"Morse (CW)",fm:"FM étroite",wfm:"FM large"};
+const RXT={kiwi:"KiwiSDR",websdr:"WebSDR",owrx:"OpenWebRX"};
+const DEF=[{id:"twente",n:"WebSDR Twente (Pays-Bas)",type:"websdr",host:"http://websdr.ewi.utwente.nl:8901"},{id:"heppen",n:"WebSDR Heppen (Belgique)",type:"websdr",host:"http://websdr.heppen.be:8091"},{id:"kiwi-at",n:"KiwiSDR Autriche",type:"kiwi",host:"http://kiwi.web-sdr.at:8073"},{id:"kiwi-uk",n:"KiwiSDR Royaume-Uni",type:"kiwi",host:"http://websdr.uk:8060"},{id:"kiwi-ch",n:"KiwiSDR Suisse",type:"kiwi",host:"http://hb9re.ddns.net:8083"}];
+const P=`# Heure exacte (signaux horaires)
+WWV (États-Unis) 5 MHz|5000|am
+WWV (États-Unis) 10 MHz|10000|am
+WWV (États-Unis) 15 MHz|15000|am
+CHU (Canada) 3 330 kHz|3330|usb
+CHU (Canada) 7 850 kHz|7850|usb
+CHU (Canada) 14 670 kHz|14670|usb
+BPM (Chine) 10 MHz|10000|am|partage avec WWV
+RWM (Russie) 9 996 kHz|9996|am
+DCF77 (Allemagne) 77,5 kHz|77.5|am|onde très longue
+# Radiodiffusion ondes courtes (bandes)
+Bande 49 m|6000|am|selon l’heure
+Bande 41 m|7300|am|selon l’heure
+Bande 31 m|9600|am|selon l’heure
+Bande 25 m|11800|am|selon l’heure
+Bande 22 m|13700|am|selon l’heure
+Bande 19 m|15400|am|selon l’heure
+Bande 16 m|17700|am|selon l’heure
+Bande 13 m|21600|am|selon l’heure
+# Radiodiffusion locale
+Grandes ondes (centre de bande)|200|am
+Ondes moyennes (centre de bande)|1000|am
+FM radiodiffusion 88–108 MHz|98000|wfm|récepteur VHF
+# Radioamateurs
+160 m|1850|lsb
+80 m|3700|lsb
+60 m|5357|usb
+40 m|7100|lsb
+30 m (morse)|10120|cw
+20 m|14200|usb|la plus active
+17 m|18130|usb
+15 m|21300|usb
+12 m|24950|usb
+10 m|28400|usb
+6 m|50150|usb|récepteur VHF
+2 m (appel FM)|145500|fm|récepteur VHF
+70 cm (appel FM)|433500|fm|récepteur UHF
+# Aviation civile
+Urgence aviation 121,5 MHz|121500|am|récepteur VHF
+Bande aviation 118–137 MHz|118500|am|récepteur VHF
+Shannon VOLMET 3 413 kHz|3413|usb|météo pour avions
+Shannon VOLMET 5 505 kHz|5505|usb
+Shannon VOLMET 8 957 kHz|8957|usb
+Shannon VOLMET 13 264 kHz|13264|usb
+New York VOLMET 6 604 kHz|6604|usb
+New York VOLMET 10 051 kHz|10051|usb
+New York VOLMET 13 270 kHz|13270|usb
+# Mer
+Canal 16 VHF (appel et détresse)|156800|fm|récepteur VHF
+Détresse 2 182 kHz|2182|usb
+Détresse 4 125 kHz|4125|usb
+Détresse 6 215 kHz|6215|usb
+Détresse 8 291 kHz|8291|usb
+# Météo, CB et divers
+CB canal 19 (27 MHz)|27185|am
+PMR446 canal 1|446006|fm|récepteur UHF
+Météo NOAA (États-Unis)|162550|fm|récepteur VHF
+ISS : voix (quand actif)|145800|fm|récepteur VHF
+Jupiter (radioastronomie 20,1 MHz)|20100|usb|bruit, selon l’activité`;
+const O=`# Annuaires de récepteurs
+Carte des récepteurs KiwiSDR|https://map.kiwisdr.com/
+Liste des KiwiSDR publics|https://kiwisdr.com/public/
+WebSDR (réseau mondial)|https://websdr.org/
+ReceiverBook (tous types)|https://www.receiverbook.de/
+RX-TX.info (carte de tous les récepteurs)|https://rx-tx.info/
+SDR.hu (récepteurs OpenWebRX)|https://sdr.hu/
+OpenWebRX|https://www.openwebrx.de/
+# Aviation, secours et scanners publics
+LiveATC (contrôle aérien en direct)|https://www.liveatc.net/
+Broadcastify (scanners publics)|https://www.broadcastify.com/listen/
+# Espace et satellites
+SatNOGS (réception de satellites)|https://network.satnogs.org/
+# Fréquences et identification
+Short-wave.info (ondes courtes)|https://www.short-wave.info/
+RadioReference (base de fréquences)|https://www.radioreference.com/
+Signal Identification Wiki|https://www.sigidwiki.com/
+# Matériel optionnel pour recevoir soi-même
+RTL-SDR (clé de réception)|https://www.rtl-sdr.com/
+SDR++ (logiciel libre)|https://www.sdrpp.org/
+SDR# (logiciel)|https://airspy.com/download/`;
+const parse=(t,f)=>t.trim().split("\n").reduce((a,l)=>{l=l.trim();if(l[0]==="#")a.push({g:l.slice(1).trim(),t:[]});else if(l)a[a.length-1].t.push(f(l.split("|")));return a},[]);
+const PRE=parse(P,p=>({n:p[0],f:parseFloat(p[1]),m:p[2],note:p[3]||""})),ORG=parse(O,p=>({n:p[0],u:p[1]}));
+const $=s=>document.querySelector(s),q=()=>$("#q").value.trim();
+const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x)e.textContent=x;return e};
+const msg=t=>{$("#st").textContent=t};
+const fmtF=k=>k>=1000?(+(k/1000).toFixed(4))+" MHz":k+" kHz";
+const origin=h=>{try{let x=String(h).trim();if(!/^https?:\/\//i.test(x))x="http://"+x;return new URL(x).origin}catch(e){return null}};
+function tune(rx,f,m){const o=origin(rx.host);if(!o)return"#";const M={am:"am",usb:"usb",lsb:"lsb",cw:"cw",fm:"nbfm",wfm:"nbfm"},W={am:"am",usb:"usb",lsb:"lsb",cw:"cw",fm:"fm",wfm:"fm"},X={am:"am",usb:"usb",lsb:"lsb",cw:"cw",fm:"nfm",wfm:"wfm"};if(rx.type==="kiwi")return o+"/?f="+f+(M[m]||"am");if(rx.type==="websdr")return o+"/?tune="+f+(W[m]||"am");return o+"/#freq="+Math.round(f*1000)+",mod="+(X[m]||"am")}
+const isU=u=>/^https?:\/\//i.test(u||"");
+function clean(d){d=d&&typeof d==="object"?d:{};const s=(v,n)=>String(v==null?"":v).slice(0,n);
+const favs=(Array.isArray(d.favs)?d.favs:[]).map(x=>{if(!x||typeof x.id!=="string")return null;if(x.t==="link"&&isU(x.u))return{t:"link",id:s(x.id,600),n:s(x.n,120),u:s(x.u,500)};if(x.t==="station"&&isU(x.u))return{t:"station",id:s(x.id,80),n:s(x.n,120),u:s(x.u,500),c:s(x.c,60),codec:s(x.codec,20),br:Number(x.br)||0};if(x.t==="freq"&&isFinite(x.f)&&MODES[x.m])return{t:"freq",id:s(x.id,80),n:s(x.n,120),f:Number(x.f),m:x.m};return null}).filter(Boolean).slice(0,2000);
+const rx=(Array.isArray(d.rx)?d.rx:[]).map(r=>r&&RXT[r.type]&&origin(r.host)?{id:s(r.id,40)||"r"+Math.random().toString(36).slice(2,8),n:s(r.n,80),type:r.type,host:origin(r.host)}:null).filter(Boolean).slice(0,100);
+const R=rx.length?rx:DEF.map(r=>({...r}));return{favs,rx:R,cur:R.some(r=>r.id===d.cur)?d.cur:R[0].id}}
+let D=clean({});
+try{const v=JSON.parse(localStorage.getItem("rm2"));if(v)D=clean(v)}catch(e){}
+function save(){try{localStorage.setItem("rm2",JSON.stringify(D));msg(localStorage.getItem("rm2")?"Favoris enregistrés ✓ sur cet appareil":"Enregistrement impossible dans ce navigateur")}catch(e){msg("Enregistrement impossible dans ce navigateur (mode privé ?)")}}
+const has=id=>D.favs.some(x=>x.id===id),cur=()=>D.rx.find(r=>r.id===D.cur)||D.rx[0];
+function tog(it){D.favs=has(it.id)?D.favs.filter(x=>x.id!==it.id):[...D.favs,it];save()}
+function row(n,sub,href,it){const r=el("div","r"),a=el("a");a.href=href;a.target="_blank";a.rel="noopener noreferrer";a.append(el("b",0,n));if(sub)a.append(el("small",0,sub));r.append(a);if(it){const s=el("button","s",has(it.id)?"★":"☆");s.title="Favori";s.onclick=()=>{tog(it);s.textContent=has(it.id)?"★":"☆";if(tab==="favs")render()};r.append(s)}return r}
+const fit=(n,f,m)=>({t:"freq",id:"f:"+f+":"+m,n,f,m});
+const frow=(n,f,m,note)=>{const rx=cur();return row(n,[fmtF(f),MODES[m],f>30000&&rx.type!=="owrx"?"⚠ VHF : préférez OpenWebRX":note].filter(Boolean).join(" · "),tune(rx,f,m),fit(n,f,m))};
+const det=(g,open)=>{const d=document.createElement("details");d.open=!!open;d.append(el("summary",0,g));return d};
+let tab=(()=>{try{return JSON.parse(localStorage.getItem("tab"))||"all"}catch(e){return"all"}})();
+const GEN=[["","Tous les genres"],["news","Actualités"],["talk","Débats et parole"],["pop","Pop"],["rock","Rock"],["jazz","Jazz"],["classical","Classique"],["electronic","Électro"],["hip hop","Hip-hop"],["world","Musiques du monde"],["sport","Sport"],["religion","Religion"]];
+let API=["https://all.api.radio-browser.info","https://de1.api.radio-browser.info","https://nl1.api.radio-browser.info","https://at1.api.radio-browser.info","https://de2.api.radio-browser.info","https://fi1.api.radio-browser.info"];
+const tmo=ms=>{const c=new AbortController();setTimeout(()=>c.abort(),ms);return c.signal};
+const emsg=x=>x&&x.name==="AbortError"?"délai dépassé":(x&&x.message)||String(x);
+let DP=null;
+const discover=()=>DP||(DP=(async()=>{try{const r=await fetch("https://all.api.radio-browser.info/json/servers",{signal:tmo(6000)});if(!r.ok)return;const n=[...new Set((await r.json()).map(x=>x&&x.name).filter(x=>/^[a-z0-9.-]+\.radio-browser\.info$/i.test(x||"")))];if(n.length){const m=n.map(x=>"https://"+x);API=[...m,...API.filter(b=>!m.includes(b))]}}catch(e){}})());
+async function rb(p){await discover();let e=new Error("aucun serveur joignable");for(const b of API){try{const r=await fetch(b+p,{signal:tmo(8000)});if(r.ok)return await r.json();e=new Error("HTTP "+r.status)}catch(x){e=x}}throw e}
+async function diag(box){box.textContent="Test en cours…";const out=[];for(const b of API){try{const r=await fetch(b+"/json/stats",{signal:tmo(8000)});out.push((r.ok?"✓ ":"✗ ")+b.replace("https://","")+(r.ok?"":" : HTTP "+r.status))}catch(x){out.push("✗ "+b.replace("https://","")+" : "+emsg(x))}}box.textContent=out.join("\n")+"\n\nSi tout est en ✗ : la page n’a pas accès à Internet (aperçu, bloqueur de contenu, réseau filtré…)."}
+function fail(box){box.append(el("div","hint","Annuaire des radios injoignable depuis cette page. Téléchargez-le puis ouvrez-le avec Chrome ou Edge."));const d=el("div","hint");d.style.whiteSpace="pre-wrap";const b=el("button",0,"Tester la connexion");b.onclick=()=>diag(d);box.append(b,d,row("Ouvrir Radio Browser (site)","","https://www.radio-browser.info/"))}
+const okS=s=>{const u=s.url_resolved||s.url;return !s.hls&&isU(u)&&(location.protocol!=="https:"||/^https:/i.test(u))};
+const mapS=s=>({t:"station",id:s.stationuuid,n:String(s.name||"").trim(),u:s.url_resolved||s.url,c:s.country||"",br:s.bitrate||0,codec:s.codec||""});
+let RES=[],CTRY=null;
+function srow(st){const r=el("div","r"),a=el("a");a.href="#";a.onclick=e=>{e.preventDefault();playSt(st)};a.append(el("b",0,st.n||"Sans nom"),el("small",0,[st.c,st.codec,st.br?st.br+" kb/s":""].filter(Boolean).join(" · ")));r.append(a);const s=el("button","s",has(st.id)?"★":"☆");s.title="Favori";s.onclick=()=>{tog(st);s.textContent=has(st.id)?"★":"☆";if(tab==="favs")render()};r.append(s);return r}
+function showRes(){const o=$("#res");if(!o)return;o.textContent="";if(!RES.length){o.append(el("div","hint","Aucune station trouvée."));return}o.append(el("div","hint",RES.length+" stations"));RES.forEach(s=>o.append(srow(s)))}
+async function doSearch(){const o=$("#res");if(!o)return;o.textContent="Recherche…";try{const qs=new URLSearchParams({limit:"100",hidebroken:"true",order:"clickcount",reverse:"true"});if(q())qs.set("name",q());if($("#cc")&&$("#cc").value)qs.set("countrycode",$("#cc").value);if($("#tg")&&$("#tg").value)qs.set("tag",$("#tg").value);const d=await rb("/json/stations/search?"+qs.toString());RES=d.filter(okS).slice(0,60).map(mapS)}catch(e){o.textContent="";fail(o);return}showRes()}
+function radios(o){const cc=el("select");cc.id="cc";cc.append(new Option("Tous les pays",""));if(CTRY)CTRY.forEach(c=>cc.append(new Option(c.name+" ("+c.n+")",c.code)));const tg=el("select");tg.id="tg";GEN.forEach(([v,n])=>tg.append(new Option(n,v)));
+const r=el("div","row"),b=el("button",0,"Chercher"),rn=el("button",0,"🎲 Au hasard");b.onclick=doSearch;cc.onchange=doSearch;tg.onchange=doSearch;
+rn.onclick=async()=>{try{const d=await rb("/json/stations/search?limit=30&hidebroken=true&order=random");const s=d.find(okS);if(s)playSt(mapS(s));else msg("Aucune station trouvée.")}catch(e){msg("Annuaire indisponible.")}};
+r.append(b,rn);o.append(el("div","hint","Tapez un nom en haut (Entrée pour chercher), ou filtrez par pays et genre."),cc,tg,r);const res=el("div");res.id="res";o.append(res);
+if(RES.length)showRes();else doSearch();
+if(!CTRY)rb("/json/countries").then(d=>{CTRY=d.filter(c=>c.stationcount>0&&/^[A-Za-z]{2}$/.test(c.iso_3166_1||"")).map(c=>({code:c.iso_3166_1,name:c.name,n:c.stationcount})).sort((a,b)=>a.name.localeCompare(b.name,"fr"));const s=$("#cc");if(tab==="radios"&&s){const v=s.value;CTRY.forEach(c=>s.append(new Option(c.name+" ("+c.n+")",c.code)));s.value=v}}).catch(()=>{});
+const d=det("Autres annuaires (s’ouvrent dans un onglet)");DIRS.forEach(([n,u,h])=>{const href=q()?u.split("{q}").join(encodeURIComponent(q())):h;d.append(row(n,"",href,{t:"link",id:"l:"+href,n:q()?n+" : "+q():n,u:href}))});o.append(d);
+const pd=det("Radios par pays (onlineradiobox)"),ch=el("div","chips");PAYS.forEach(([k,n])=>{const a=el("a",0,n);a.href="https://onlineradiobox.com/"+k+"/";a.target="_blank";a.rel="noopener noreferrer";ch.append(a)});pd.append(ch);o.append(pd)}
+const norm=s=>String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+function parseFreq(s){const m=String(s).trim().replace(",",".").match(/^(\d+(?:\.\d+)?)\s*(khz|mhz|ghz|k|m)?$/i);if(!m)return null;const v=parseFloat(m[1]),u=(m[2]||"").toLowerCase();let k;if(u==="khz"||u==="k")k=v;else if(u==="mhz"||u==="m")k=v*1000;else if(u==="ghz")k=v*1e6;else k=(m[1].includes(".")&&v<1000)?v*1000:v;return k>=0.01&&k<=3000000?Math.round(k*1000)/1000:null}
+function guessModes(k){if(k<1800)return["am"];if(k>=76000&&k<=108000)return["wfm","am"];if(k>=30000)return["fm","am","usb"];if(k<10000)return["lsb","usb","am"];return["usb","lsb","am"]}
+const PLAT=[["Radio Garden","https://radio.garden/search?q={q}"],["Radio Browser","https://www.radio-browser.info/search?name={q}"],["TuneIn","https://tunein.com/search/?query={q}"],["radio.net","https://www.radio.net/search?q={q}"],["myTuner","https://mytuner-radio.com/search/?q={q}"],["Online Radio Box","https://onlineradiobox.com/search?q={q}"],["Le web (DuckDuckGo) : radio en direct","https://duckduckgo.com/?q={q}+radio+en+direct"]];
+let gseq=0;
+function allTab(o){const v=q(),my=++gseq;
+if(!v){o.append(el("div","hint","Tapez dans la barre ci-dessus un nom de radio, un pays, un genre ou une fréquence (ex : France Info, jazz, Maroc, 7200, 98.5), puis touchez 🔍 ou Entrée. Tout est cherché d’un coup."));return}
+const k=parseFreq(v);
+if(k!==null){o.append(el("div","sec","Fréquence "+fmtF(k)));const c=el("div","card");guessModes(k).forEach(m=>c.append(frow(fmtF(k)+" "+MODES[m],k,m,"")));o.append(c,el("div","hint","Le récepteur utilisé se choisit dans l’onglet Fréquences."))}
+const nq=norm(v),pre=[];PRE.forEach(c=>c.t.forEach(x=>{if(norm(x.n+" "+c.g).includes(nq)||(k!==null&&Math.abs(x.f-k)<=0.0005*k+0.001))pre.push(x)}));
+if(pre.length){o.append(el("div","sec","Fréquences prêtes à écouter ("+pre.length+")"));const c=el("div","card");pre.slice(0,30).forEach(x=>c.append(frow(x.n,x.f,x.m,x.note)));o.append(c)}
+const lk=[];ORG.forEach(c=>c.t.forEach(x=>{if(norm(x.n+" "+c.g).includes(nq))lk.push(x)}));
+if(lk.length){o.append(el("div","sec","Récepteurs et services"));const c=el("div","card");lk.forEach(x=>c.append(row(x.n,"",x.u,{t:"link",id:"l:"+x.u,n:x.n,u:x.u})));o.append(c)}
+o.append(el("div","sec","Stations de radio"));const sb=el("div","card");sb.append(el("div","hint","Recherche des stations…"));o.append(sb);
+o.append(el("div","sec","Chercher aussi sur…"));const pc=el("div","card");PLAT.forEach(([n,u])=>{const h=u.split("{q}").join(encodeURIComponent(v));pc.append(row(n,"",h,{t:"link",id:"l:"+h,n:n+" : "+v,u:h}))});o.append(pc);
+Promise.allSettled(["name","tag","country"].map(f=>rb("/json/stations/search?limit=40&hidebroken=true&order=clickcount&reverse=true&"+f+"="+encodeURIComponent(v)))).then(rs=>{if(my!==gseq)return;sb.textContent="";const seen=new Set(),items=[];rs.forEach(r=>{if(r.status==="fulfilled")r.value.filter(okS).forEach(s=>{if(!seen.has(s.stationuuid)){seen.add(s.stationuuid);items.push(mapS(s))}})});
+if(rs.every(r=>r.status==="rejected")){fail(sb);return}
+if(!items.length){sb.append(el("div","hint","Aucune station trouvée pour « "+v+" »."));return}
+sb.append(el("div","hint",Math.min(items.length,80)+" stations : touchez pour écouter"));items.slice(0,80).forEach(s=>sb.append(srow(s)))})}
+function rxbox(o){const c=el("div","card");c.append(el("div","sec","Récepteur utilisé"));const s=el("select");D.rx.forEach(r=>{const x=el("option",0,r.n+" ("+RXT[r.type]+")");x.value=r.id;s.append(x)});s.value=D.cur;s.onchange=()=>{D.cur=s.value;save();render()};c.append(s);
+c.append(el("div","hint","KiwiSDR et WebSDR couvrent surtout les ondes courtes (jusqu’à 30 MHz). Pour la FM, l’aviation ou la mer en VHF, ajoutez un récepteur OpenWebRX."));
+const del=el("button",0,"Retirer ce récepteur");del.onclick=()=>{if(D.rx.length<2){msg("Gardez au moins un récepteur.");return}D.rx=D.rx.filter(r=>r.id!==D.cur);D.cur=D.rx[0].id;save();render()};c.append(del);
+const a=det("Ajouter un récepteur"),n=el("input");n.placeholder="Nom (ex : KiwiSDR de Lyon)";const t=el("select");Object.keys(RXT).forEach(k=>{const x=el("option",0,RXT[k]);x.value=k;t.append(x)});const h=el("input");h.placeholder="Adresse (ex : kiwi.exemple.org:8073)";const b=el("button",0,"Enregistrer ce récepteur");
+b.onclick=()=>{const og=origin(h.value);if(!h.value.trim()||!og){msg("Adresse invalide : copiez celle du récepteur depuis la carte (onglet Ondes).");return}const r={id:"r"+Date.now(),n:n.value.trim()||og,type:t.value,host:og};D.rx.push(r);D.cur=r.id;save();render()};
+a.append(n,t,h,b,el("div","hint","Trouvez un récepteur sur la carte KiwiSDR ou RX-TX.info (onglet Ondes), puis copiez son adresse ici."));c.append(a);
+const m=det("Accord manuel",1),f=el("input");f.placeholder="Fréquence en kHz (ex : 7200 ou 98000)";f.inputMode="decimal";const ms=el("select");Object.keys(MODES).forEach(k=>{const x=el("option",0,MODES[k]);x.value=k;ms.append(x)});const nm=el("input");nm.placeholder="Nom pour les favoris (facultatif)";
+const g=el("a","go off","Écouter");g.target="_blank";g.rel="noopener noreferrer";const fv=el("button",0,"☆ Enregistrer en favori");
+const rd=()=>{const v=parseFloat(f.value.replace(",",".").replace(/\s/g,""));return isFinite(v)&&v>0?v:null};
+const up=()=>{const v=rd();if(v){g.href=tune(cur(),v,ms.value);g.className="go"}else{g.href="#";g.className="go off"}};[f,ms].forEach(e=>e.addEventListener("input",up));
+fv.onclick=()=>{const v=rd();if(!v){msg("Entrez une fréquence en kHz, par exemple 7200.");return}const it=fit(nm.value.trim()||fmtF(v)+" "+MODES[ms.value],v,ms.value);if(!has(it.id)){D.favs.push(it);save()}else msg("Déjà dans vos favoris.")};
+m.append(f,ms,nm,g,fv);c.append(m);o.append(c)}
+function freqs(o){rxbox(o);o.append(el("div","sec","Fréquences prêtes à écouter"));PRE.forEach((c,i)=>{const d=det(c.g+" ("+c.t.length+")",i===0);c.t.forEach(x=>d.append(frow(x.n,x.f,x.m,x.note)));o.append(d)});o.append(el("div","hint","Les émissions dépendent de l’heure et de la propagation. Écoutez uniquement des émissions publiques."))}
+function ondes(o){o.append(el("div","hint","Services installés dans le monde entier et branchés sur Internet. Chacun s’ouvre dans un nouvel onglet."));ORG.forEach((c,i)=>{const d=det(c.g,i===0);c.t.forEach(x=>d.append(row(x.n,"",x.u,{t:"link",id:"l:"+x.u,n:x.n,u:x.u})));o.append(d)})}
+function favs(o){let any=0;[["station","Radios"],["freq","Fréquences"],["link","Liens et récepteurs"]].forEach(([t,title])=>{const l=D.favs.filter(x=>x.t===t);if(!l.length)return;any=1;o.append(el("div","sec",title));const c=el("div","card");l.forEach(x=>c.append(t==="station"?srow(x):t==="freq"?frow(x.n,x.f,x.m,""):row(x.n,(()=>{try{return new URL(x.u).host}catch(e){return""}})(),x.u,x)));o.append(c)});
+if(!any)o.append(el("div","hint","Aucun favori. Touchez ☆ à côté d’un lien ou d’une fréquence pour l’ajouter ici."));
+const a=det("Ajouter mon propre lien"),n=el("input");n.placeholder="Nom";const u=el("input");u.placeholder="Adresse (ex : https://radio.exemple.fr)";const b=el("button",0,"Ajouter aux favoris");
+b.onclick=()=>{let x=u.value.trim();if(!x)return;if(!/^https?:\/\//i.test(x))x="https://"+x;try{new URL(x)}catch(e){msg("Adresse invalide.");return}if(!has("l:"+x))D.favs.push({t:"link",id:"l:"+x,n:n.value.trim()||x,u:x});save();render()};a.append(n,u,b);o.append(a);
+const s=det("Sauvegarder ou transférer mes favoris"),ta=el("textarea");ta.rows=5;ta.placeholder="Collez ici des favoris exportés pour les importer";const cp=el("button",0,"Copier mes favoris"),im=el("button",0,"Importer le texte collé");
+cp.onclick=async()=>{const t=JSON.stringify(D);ta.value=t;try{await navigator.clipboard.writeText(t);msg("Favoris copiés ✓")}catch(e){ta.select();msg("Sélectionnez le texte ci-dessus et copiez-le.")}};
+im.onclick=()=>{try{const c=clean(JSON.parse(ta.value));c.favs.forEach(x=>{if(!has(x.id))D.favs.push(x)});c.rx.forEach(x=>{if(!D.rx.some(y=>y.host===x.host&&y.type===x.type))D.rx.push(x)});save();render()}catch(e){msg("Texte invalide.")}};
+s.append(el("div","hint","Les favoris sont gardés dans ce navigateur, sur cet appareil."),cp,ta,im);o.append(s)}
+function render(){try{localStorage.setItem("tab",JSON.stringify(tab))}catch(e){}document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));const o=$("#out");o.textContent="";({all:allTab,radios,freqs,ondes,favs})[tab](o)}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;msg("");render()});
+$("#q").addEventListener("keydown",e=>{if(e.key==="Enter"){if(tab==="radios")doSearch();else{tab="all";msg("");render()}}});
+$("#gs").onclick=()=>{if(tab==="radios")doSearch();else{tab="all";msg("");render()}};
+$("#th").onclick=()=>{const r=document.documentElement,d=matchMedia("(prefers-color-scheme: dark)").matches,c=r.dataset.theme||(d?"dark":"light"),n=c==="dark"?"light":"dark";r.dataset.theme=n;try{localStorage.setItem("th",n)}catch(e){}};
+try{const sv=localStorage.getItem("th");if(sv)document.documentElement.dataset.theme=sv}catch(e){}
+const au=$("#au");let curS=null;
+function playSt(s){curS=s;$("#pn").textContent=s.n||"Radio";$("#pi").textContent="Connexion…";au.src=s.u;au.volume=+$("#pv").value;au.play().catch(()=>{});fetch(API[0]+"/json/url/"+encodeURIComponent(s.id)).catch(()=>{})}
+au.addEventListener("playing",()=>{$("#pp").textContent="⏸";$("#pi").textContent="En direct"+(curS&&curS.c?" · "+curS.c:"")+(curS&&curS.br?" · "+curS.br+" kb/s":"")});
+au.addEventListener("waiting",()=>{if(curS)$("#pi").textContent="Chargement…"});
+au.addEventListener("pause",()=>{$("#pp").textContent="▶"});
+au.addEventListener("error",()=>{$("#pp").textContent="▶";if(curS)$("#pi").textContent="Flux indisponible"});
+$("#pp").onclick=()=>{if(!curS)return;if(au.paused){au.src=curS.u;au.play().catch(()=>{})}else{au.pause();au.removeAttribute("src");au.load();$("#pi").textContent="Arrêté"}};
+$("#pv").oninput=()=>{au.volume=+$("#pv").value};
+render();
+</script>
+</body>
+</html>
